@@ -47,6 +47,11 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- Firebase SDK (My Portfolio: my-portfolio-7cd72) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <style>
     /* Safe Area Insets for Mobile */
     :root {
@@ -507,13 +512,22 @@
         </button>
       </div>
 
-      <div class="mt-4 space-y-4 text-xs">
+      <div class="mt-4 space-y-3.5 text-xs">
         <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
           <div class="flex items-center justify-between mb-1">
-            <span class="font-bold text-slate-200">Decentralized IPFS</span>
-            <span class="text-[10px] text-emerald-400 font-mono">Live</span>
+            <span class="font-bold text-slate-200">Firebase Cloud Backend</span>
+            <span class="text-[10px] text-emerald-400 font-mono font-bold">Connected</span>
           </div>
-          <p class="text-slate-400 text-[11px]">Photos are pinned permanently to IPFS for universal access.</p>
+          <p class="text-slate-300 font-mono text-[11px]">Project: <span class="text-brand-400">my-portfolio-7cd72</span></p>
+          <p class="text-slate-400 font-mono text-[10px] mt-0.5 truncate">Bucket: my-portfolio-7cd72.firebasestorage.app</p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-slate-200">Decentralized IPFS Backup</span>
+            <span class="text-[10px] text-cyan-400 font-mono font-bold">Active</span>
+          </div>
+          <p class="text-slate-400 text-[11px]">Photos are also pinned permanently to IPFS for universal decentralized access.</p>
         </div>
 
         <button onclick="exportBackupData()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center gap-2 border border-slate-700">
@@ -532,6 +546,30 @@
 
   <!-- ==================== CORE JAVASCRIPT ==================== -->
   <script>
+    // Firebase Configuration for "My portfolio" (my-portfolio-7cd72)
+    const firebaseConfig = {
+      projectId: "my-portfolio-7cd72",
+      appId: "1:39322150875:web:58e8c59b4fe46e43ba29fe",
+      storageBucket: "my-portfolio-7cd72.firebasestorage.app",
+      apiKey: "AIzaSyB9UZK3OcTsKYJxq66XYhwxIj8gPmuVyoU",
+      authDomain: "my-portfolio-7cd72.firebaseapp.com",
+      messagingSenderId: "39322150875",
+      measurementId: "G-400W825SQ6"
+    };
+
+    let fbStorage = null;
+    let fbDb = null;
+    try {
+      if (typeof firebase !== 'undefined') {
+        const fbApp = firebase.initializeApp(firebaseConfig);
+        fbStorage = firebase.storage(fbApp);
+        fbDb = firebase.firestore(fbApp);
+        console.log("Connected to Firebase: my-portfolio-7cd72");
+      }
+    } catch (e) {
+      console.warn("Firebase initialization warning:", e);
+    }
+
     // Pinata IPFS Setup
     const PINATA_JWT_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIyZjdjYTI1Zi1jZTBlLTQ0NjctYmE0Mi1lZTI3YjU0YWE5ZDEiLCJlbWFpbCI6Im9sYWRpenouZGV2QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJmNTcwODNiNmU0OTM2NjlhZmFlZiIsInNjb3BlZEtleVNlY3JldCI6ImQ5MDBmYTNkNGZhODc5MTM1M2VkYmM3NjA2ODRkZTkxM2UyMzdmMzQ4Yjg3NzBmYmU0MjRjMTI2ZTcyMGI5ODUiLCJleHAiOjE3OTM0NDY4NTF9.MUyMHNFawG4q9h5SGuIPCezn6Q9QEZEsN8jVhLJAvsI";
     const PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
@@ -806,6 +844,19 @@
         let ipfsHash = null;
         let imageUrl = null;
 
+        // 1. Upload to Firebase Storage (My portfolio: my-portfolio-7cd72)
+        if (fbStorage) {
+          try {
+            const cleanFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+            const storageRef = fbStorage.ref(`picshare/${cleanFileName}`);
+            const snapshot = await storageRef.put(file);
+            imageUrl = await snapshot.ref.getDownloadURL();
+          } catch (fbErr) {
+            console.warn("Firebase Storage upload error, trying IPFS:", fbErr);
+          }
+        }
+
+        // 2. Also Pin to Decentralized IPFS
         try {
           const formData = new FormData();
           formData.append("file", file);
@@ -820,7 +871,7 @@
           if (res.ok) {
             const data = await res.json();
             ipfsHash = data.IpfsHash;
-            imageUrl = `${PINATA_GATEWAY}${ipfsHash}`;
+            if (!imageUrl) imageUrl = `${PINATA_GATEWAY}${ipfsHash}`;
           }
         } catch (err) {
           console.warn("IPFS upload fallback:", err);
