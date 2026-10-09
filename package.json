@@ -1,0 +1,19 @@
+{
+  "name": "picshare",
+  "version": "1.0.0",
+  "description": "PicShare - Mobile-First Picture Posting, Organizing & Permanent Sharing Platform",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "mobile-first",
+    "photo-sharing",
+    "ipfs",
+    "image-hosting",
+    "picture-vault"
+  ],
+  "author": "Oladizz",
+  "license": "MIT"
+}

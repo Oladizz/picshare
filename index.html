@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PicShare | Mobile-First Picture Posting & Sharing</title>
+  
+  <!-- Mobile Web App & PWA Meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#080c14">
+  <meta name="description" content="Mobile-first picture hosting, organizing, and instant sharing. Upload pictures directly from your phone or desktop with permanent decentralized links.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              accent: '#06b6d4'
+            },
+            dark: {
+              bg: '#080c14',
+              surface: '#0f1623',
+              card: '#141d2e',
+              border: '#1e293b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Safe Area Insets for Mobile */
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+    }
+
+    body {
+      padding-top: var(--sat);
+      padding-bottom: calc(var(--sab) + 72px); /* Space for mobile bottom bar */
+      background-color: #080c14;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(99, 102, 241, 0.05) 0px, transparent 50%);
+      background-attachment: fixed;
+      touch-action: pan-y;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (min-width: 768px) {
+      body {
+        padding-bottom: 0px;
+      }
+    }
+
+    /* Hide scrollbar for clean horizontal ribbon */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Bottom Sheet Animation for Mobile */
+    @keyframes slideUpSheet {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .mobile-sheet {
+      animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Glass Panels */
+    .glass-header {
+      background: rgba(8, 12, 20, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .glass-bottom-bar {
+      background: rgba(12, 18, 30, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ==================== MOBILE TOP APP BAR ==================== -->
+  <header class="sticky top-0 z-40 glass-header">
+    <div class="max-w-4xl mx-auto px-4 h-15 flex items-center justify-between gap-3">
+      
+      <!-- Brand Logo -->
+      <a href="index.html" class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i data-lucide="image" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">PicShare</span>
+            <span class="text-[9px] px-1.5 py-0.2 rounded-full bg-brand-500/10 text-brand-400 font-mono font-bold border border-brand-500/25 uppercase">Vault</span>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-none">Mobile Picture Sharing</p>
+        </div>
+      </a>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center gap-1.5">
+        <!-- Search Trigger -->
+        <button 
+          onclick="toggleSearchInput()" 
+          class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white border border-slate-700/60 transition-colors"
+          title="Search"
+        >
+          <i data-lucide="search" class="w-4 h-4"></i>
+        </button>
+
+        <!-- New Album Button (Desktop/Tablet) -->
+        <button 
+          onclick="openNewAlbumModal()" 
+          class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/60"
+        >
+          <i data-lucide="folder-plus" class="w-4 h-4 text-brand-400"></i>
+          <span>Album</span>
+        </button>
+
+        <!-- Post Picture Button (Desktop/Tablet) -->
+        <button 
+          onclick="openUploadModal()" 
+          class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-500/25"
+        >
+          <i data-lucide="upload" class="w-4 h-4"></i>
+          <span>Post</span>
+        </button>
+
+        <!-- Visibility Filter Dropdown -->
+        <select 
+          id="visibilityFilter" 
+          onchange="handleFilterChange()" 
+          class="bg-slate-800/90 text-slate-300 text-xs font-semibold pl-2 pr-6 py-2 rounded-xl border border-slate-700/70 focus:outline-none focus:border-brand-500 cursor-pointer"
+        >
+          <option value="all">All</option>
+          <option value="public">🌟 Public</option>
+          <option value="unlisted">🔒 Unlisted</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Expandable Search Input Row -->
+    <div id="searchRow" class="hidden px-4 pb-3 border-t border-slate-800/60 pt-2">
+      <div class="relative w-full max-w-4xl mx-auto">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Search by title, tag, album... (Press /)" 
+          class="w-full bg-[#0f1623] text-sm text-slate-100 placeholder-slate-500 pl-9 pr-9 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-brand-500"
+        >
+        <button onclick="clearSearch()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== HORIZONTAL ALBUMS / CATEGORIES SCROLLER ==================== -->
+  <section class="border-b border-slate-800/70 bg-[#0c121e]/90 sticky top-15 z-30 backdrop-blur-sm">
+    <div class="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3 overflow-x-auto no-scrollbar" id="albumsRibbon">
+      <!-- Populated dynamically via renderAlbums() -->
+    </div>
+  </section>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-3 sm:px-4 py-4">
+
+    <!-- Active Filter Indicator -->
+    <div id="filterIndicator" class="hidden mb-3 p-2.5 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-between text-xs text-brand-300">
+      <span id="filterIndicatorText">Active Filter: ...</span>
+      <button onclick="clearAllFilters()" class="font-bold underline text-brand-400 hover:text-white">Reset</button>
+    </div>
+
+    <!-- Vault Counter & Storage -->
+    <div class="flex items-center justify-between text-[11px] text-slate-400 mb-3 px-1">
+      <span id="photoCountBadge" class="font-semibold text-slate-300">0 pictures</span>
+      <span id="storageBadge" class="font-mono text-slate-500">0 KB used</span>
+    </div>
+
+    <!-- Photo Grid (Mobile-First 2 Columns) -->
+    <div id="photosGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-4">
+      <!-- Injected dynamically -->
+    </div>
+
+    <!-- ZERO-MOCK EMPTY STATE -->
+    <div id="emptyState" class="hidden flex-col items-center justify-center py-20 px-4 text-center">
+      <div class="w-20 h-20 rounded-3xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center mb-4 text-slate-500 shadow-xl">
+        <i data-lucide="camera" class="w-10 h-10 text-brand-400"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-100 mb-1">Your Vault is Empty</h3>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-sm mb-6 leading-relaxed">
+        You haven't posted any pictures yet. Tap the button below to upload image files from your camera or gallery and get instant shareable links.
+      </p>
+      <button 
+        onclick="openUploadModal()" 
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 text-white text-sm font-bold shadow-lg shadow-brand-500/30 cursor-pointer active:scale-95 transition-all"
+      >
+        <i data-lucide="plus" class="w-5 h-5"></i>
+        <span>Post First Picture</span>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ==================== MOBILE THUMB-ZONE BOTTOM NAVIGATION BAR ==================== -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-bottom-bar px-4 py-2 flex items-center justify-around">
+    
+    <!-- Feed / Home Tab -->
+    <button onclick="selectAlbum('all')" class="flex flex-col items-center gap-0.5 text-brand-400 p-1 min-w-[50px] cursor-pointer">
+      <i data-lucide="grid" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Feed</span>
+    </button>
+
+    <!-- Albums Tab -->
+    <button onclick="openNewAlbumModal()" class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white p-1 min-w-[50px] cursor-pointer">
+      <i data-lucide="folder-plus" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Albums</span>
+    </button>
+
+    <!-- Elevated Upload FAB (Center) -->
+    <button 
+      onclick="openUploadModal()" 
+      class="-mt-6 w-14 h-14 rounded-full bg-gradient-to-tr from-brand-600 to-brand-400 text-white flex items-center justify-center shadow-xl shadow-brand-500/40 border-4 border-[#080c14] active:scale-90 transition-transform cursor-pointer"
+      title="Upload Picture"
+    >
+      <i data-lucide="plus" class="w-7 h-7"></i>
+    </button>
+
+    <!-- Search Tab -->
+    <button onclick="toggleSearchInput()" class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white p-1 min-w-[50px] cursor-pointer">
+      <i data-lucide="search" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Search</span>
+    </button>
+
+    <!-- Settings Tab -->
+    <button onclick="openSettingsModal()" class="flex flex-col items-center gap-0.5 text-slate-400 hover:text-white p-1 min-w-[50px] cursor-pointer">
+      <i data-lucide="settings" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">Settings</span>
+    </button>
+
+  </nav>
+
+  <!-- ==================== MOBILE-FIRST UPLOAD BOTTOM SHEET ==================== -->
+  <div id="uploadModal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+    <div class="mobile-sheet w-full max-w-lg bg-[#0f1623] border-t sm:border border-slate-700/80 rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 max-h-[92vh] overflow-y-auto">
+      
+      <!-- Mobile Pull Bar Handle -->
+      <div class="sm:hidden w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-3"></div>
+
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          </div>
+          <h2 class="text-sm sm:text-base font-bold text-white">Post Pictures</h2>
+        </div>
+        <button onclick="closeUploadModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Upload Form -->
+      <form onsubmit="handleUploadSubmit(event)" class="mt-4 space-y-4">
+        
+        <!-- File Picker Card (Optimized for Mobile Camera + Gallery) -->
+        <div 
+          onclick="document.getElementById('fileInput').click()" 
+          class="border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-2xl p-6 text-center cursor-pointer bg-slate-900/60 active:scale-98 transition-all"
+        >
+          <input type="file" id="fileInput" accept="image/*" multiple class="hidden" onchange="handleFileSelect(event)">
+          
+          <div id="dropzonePrompt" class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-brand-400">
+              <i data-lucide="image-plus" class="w-6 h-6"></i>
+            </div>
+            <p class="text-xs sm:text-sm font-bold text-slate-200">
+              Tap to choose from Camera or Gallery
+            </p>
+            <p class="text-[11px] text-slate-500">Supports PNG, JPG, WEBP, GIF, SVG</p>
+          </div>
+
+          <div id="filesPreviewContainer" class="hidden grid grid-cols-3 gap-2 mt-2 max-h-40 overflow-y-auto p-1"></div>
+        </div>
+
+        <!-- Inputs -->
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Caption / Title</label>
+          <input 
+            type="text" 
+            id="uploadTitle" 
+            placeholder="e.g. Vacation shot, Web3 prototype..." 
+            class="w-full bg-slate-800 text-sm text-slate-100 placeholder-slate-500 px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-brand-500"
+          >
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-semibold text-slate-300 block mb-1">Album</label>
+            <select id="uploadAlbum" class="w-full bg-slate-800 text-xs text-slate-100 px-3 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-brand-500"></select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-300 block mb-1">Visibility</label>
+            <select id="uploadVisibility" class="w-full bg-slate-800 text-xs text-slate-100 px-3 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-brand-500">
+              <option value="public">🌟 Public</option>
+              <option value="unlisted">🔒 Unlisted</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Tags (comma separated)</label>
+          <input 
+            type="text" 
+            id="uploadTags" 
+            placeholder="camera, vacation, design" 
+            class="w-full bg-slate-800 text-sm text-slate-100 placeholder-slate-500 px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-brand-500"
+          >
+        </div>
+
+        <!-- Progress Bar -->
+        <div id="uploadProgressBarContainer" class="hidden space-y-1.5 pt-1">
+          <div class="flex justify-between text-xs">
+            <span id="uploadProgressText" class="text-brand-400 font-medium">Pinning to IPFS...</span>
+            <span id="uploadProgressPercent" class="font-mono text-slate-400">0%</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="uploadProgressBar" class="h-full bg-gradient-to-r from-brand-500 to-brand-accent transition-all" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="pt-2">
+          <button 
+            type="submit" 
+            id="uploadSubmitBtn"
+            class="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-lg shadow-brand-500/25 active:scale-98 transition-transform cursor-pointer"
+          >
+            Upload Picture
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== SHARE BOTTOM SHEET (With QR Code + Copy Suite) ==================== -->
+  <div id="shareModal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md">
+    <div class="mobile-sheet w-full max-w-md bg-[#0f1623] border-t sm:border border-slate-700/80 rounded-t-3xl sm:rounded-2xl shadow-2xl p-5 max-h-[92vh] overflow-y-auto">
+      
+      <div class="sm:hidden w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-3"></div>
+
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="share-2" class="w-4 h-4 text-brand-400"></i>
+          Share Picture
+        </h3>
+        <button onclick="closeShareModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        
+        <!-- Preview & QR Code -->
+        <div class="flex items-center gap-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
+          <img id="shareModalThumb" src="" class="w-16 h-16 rounded-xl object-cover bg-slate-800 border border-slate-700 shrink-0">
+          <div class="flex-1 overflow-hidden">
+            <h4 id="shareModalTitle" class="text-xs font-bold text-white truncate">Title</h4>
+            <span id="shareModalVis" class="text-[10px] px-2 py-0.5 rounded-full font-bold mt-1 inline-block">Public</span>
+          </div>
+          <!-- QR Code for mobile cameras -->
+          <img id="shareModalQr" src="" class="w-16 h-16 rounded-xl bg-white p-1 shrink-0" alt="QR">
+        </div>
+
+        <!-- 1-Tap Copy Buttons -->
+        <div class="space-y-2">
+          <button onclick="copyCurrentShareLink()" class="w-full py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md cursor-pointer active:scale-98 transition-transform">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copy View Link</span>
+          </button>
+          
+          <button onclick="triggerNativeShare()" class="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 border border-slate-700 cursor-pointer">
+            <i data-lucide="share" class="w-4 h-4 text-brand-400"></i>
+            <span>Native Share (WhatsApp / X / Mail)</span>
+          </button>
+
+          <button onclick="downloadCurrentSharePhoto()" class="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 border border-slate-700 cursor-pointer">
+            <i data-lucide="download" class="w-4 h-4 text-cyan-400"></i>
+            <span>Download Image File</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== NEW ALBUM MODAL ==================== -->
+  <div id="newAlbumModal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+    <div class="mobile-sheet w-full max-w-sm bg-[#0f1623] border-t sm:border border-slate-700/80 rounded-t-3xl sm:rounded-2xl shadow-2xl p-5">
+      <div class="sm:hidden w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-3"></div>
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="folder-plus" class="w-4 h-4 text-brand-400"></i>
+          Create New Album
+        </h3>
+        <button onclick="closeNewAlbumModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateAlbumSubmit(event)" class="mt-4 space-y-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-300 block mb-1">Album Name</label>
+          <input type="text" id="newAlbumName" required placeholder="e.g. Vacation, Designs..." class="w-full bg-slate-800 text-sm text-slate-100 px-3.5 py-2.5 rounded-xl border border-slate-700 focus:outline-none focus:border-brand-500">
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold mt-2">
+          Create Album
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== FULLSCREEN LIGHTBOX VIEWER ==================== -->
+  <div id="lightboxModal" class="fixed inset-0 z-50 hidden bg-black/98 flex flex-col">
+    <!-- Top Bar -->
+    <div class="h-14 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
+      <h4 id="lightboxTitle" class="text-xs sm:text-sm font-bold text-white truncate max-w-xs">Picture</h4>
+      <div class="flex items-center gap-1">
+        <button onclick="shareFromLightbox()" class="p-2 text-brand-400 hover:text-white">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+        </button>
+        <button onclick="downloadFromLightbox()" class="p-2 text-slate-300 hover:text-white">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </button>
+        <button onclick="deleteFromLightbox()" class="p-2 text-rose-400 hover:text-rose-300">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+        <button onclick="closeLightbox()" class="p-2 text-slate-400 hover:text-white ml-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Viewer Center Stage -->
+    <div class="flex-1 relative flex items-center justify-center p-2 overflow-hidden select-none" id="lightboxStage">
+      <button onclick="navigateLightbox(-1)" class="absolute left-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/60 text-white">
+        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+      </button>
+
+      <img id="lightboxImg" src="" class="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-150">
+
+      <button onclick="navigateLightbox(1)" class="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/60 text-white">
+        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Bottom Stats -->
+    <div class="p-3 px-4 bg-slate-950/80 border-t border-white/10 text-[11px] flex items-center justify-between text-slate-400">
+      <span id="lightboxDetails">Oct 9, 2026 • PNG</span>
+      <span id="lightboxIndex">1 of 1</span>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS MODAL ==================== -->
+  <div id="settingsModal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm">
+    <div class="mobile-sheet w-full max-w-sm bg-[#0f1623] border-t sm:border border-slate-700/80 rounded-t-3xl sm:rounded-2xl shadow-2xl p-5">
+      <div class="sm:hidden w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-3"></div>
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="settings" class="w-4 h-4 text-brand-400"></i>
+          Settings
+        </h3>
+        <button onclick="closeSettingsModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs">
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-slate-200">Decentralized IPFS</span>
+            <span class="text-[10px] text-emerald-400 font-mono">Live</span>
+          </div>
+          <p class="text-slate-400 text-[11px]">Photos are pinned permanently to IPFS for universal access.</p>
+        </div>
+
+        <button onclick="exportBackupData()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold flex items-center justify-center gap-2 border border-slate-700">
+          <i data-lucide="download" class="w-4 h-4"></i> Export Backup (JSON)
+        </button>
+
+        <button onclick="resetGallery()" class="w-full py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 font-bold flex items-center justify-center gap-2 border border-rose-900/40">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Clear All Photos
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-11/12 max-w-sm"></div>
+
+  <!-- ==================== CORE JAVASCRIPT ==================== -->
+  <script>
+    // Pinata IPFS Setup
+    const PINATA_JWT_DEFAULT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIyZjdjYTI1Zi1jZTBlLTQ0NjctYmE0Mi1lZTI3YjU0YWE5ZDEiLCJlbWFpbCI6Im9sYWRpenouZGV2QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJmNTcwODNiNmU0OTM2NjlhZmFlZiIsInNjb3BlZEtleVNlY3JldCI6ImQ5MDBmYTNkNGZhODc5MTM1M2VkYmM3NjA2ODRkZTkxM2UyMzdmMzQ4Yjg3NzBmYmU0MjRjMTI2ZTcyMGI5ODUiLCJleHAiOjE3OTM0NDY4NTF9.MUyMHNFawG4q9h5SGuIPCezn6Q9QEZEsN8jVhLJAvsI";
+    const PINATA_GATEWAY = "https://gateway.pinata.cloud/ipfs/";
+
+    // Standard Initial Albums (NO mock photos inside)
+    const DEFAULT_ALBUMS = [
+      { id: "all", name: "All Pictures", icon: "grid" },
+      { id: "camera", name: "Camera Roll", icon: "camera" },
+      { id: "screenshots", name: "Screenshots", icon: "smartphone" },
+      { id: "work", name: "Work & Projects", icon: "briefcase" },
+      { id: "personal", name: "Personal", icon: "user" }
+    ];
+
+    // ZERO MOCK DATA - Clean Initial State
+    let appState = {
+      photos: [], // Empty by default
+      albums: DEFAULT_ALBUMS,
+      selectedAlbum: "all",
+      selectedTag: null,
+      searchQuery: "",
+      visibilityFilter: "all",
+      activeLightboxIndex: -1,
+      activeSharePhotoId: null,
+      pendingUploadFiles: []
+    };
+
+    function initApp() {
+      loadStorage();
+      handleUrlRouting();
+      renderAlbums();
+      renderPhotos();
+      setupKeyboard();
+      lucide.createIcons();
+    }
+
+    function loadStorage() {
+      try {
+        const stored = localStorage.getItem("picshare_photos");
+        const storedAlbums = localStorage.getItem("picshare_albums");
+        if (stored) appState.photos = JSON.parse(stored);
+        if (storedAlbums) appState.albums = JSON.parse(storedAlbums);
+      } catch (e) {
+        console.error("Storage error:", e);
+      }
+    }
+
+    function saveStorage() {
+      try {
+        localStorage.setItem("picshare_photos", JSON.stringify(appState.photos));
+        localStorage.setItem("picshare_albums", JSON.stringify(appState.albums));
+      } catch (e) {
+        console.error("Save error:", e);
+      }
+    }
+
+    function handleUrlRouting() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+      let id = urlParams.get('photo') || urlParams.get('view');
+      if (!id && hash) {
+        const match = hash.match(/#(?:view|photo|share)=([a-zA-Z0-9_-]+)/);
+        if (match) id = match[1];
+      }
+      if (id) {
+        const found = appState.photos.find(p => p.id === id);
+        if (found) setTimeout(() => openShareModal(found.id), 200);
+      }
+    }
+
+    function renderAlbums() {
+      const ribbon = document.getElementById("albumsRibbon");
+      if (!ribbon) return;
+
+      const counts = { all: appState.photos.length };
+      appState.photos.forEach(p => {
+        counts[p.album] = (counts[p.album] || 0) + 1;
+      });
+
+      ribbon.innerHTML = appState.albums.map(album => {
+        const isActive = appState.selectedAlbum === album.id;
+        const count = album.id === 'all' ? appState.photos.length : (counts[album.id] || 0);
+
+        return `
+          <button 
+            onclick="selectAlbum('${album.id}')"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              isActive 
+                ? 'bg-brand-600 text-white shadow-sm' 
+                : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60'
+            }"
+          >
+            <i data-lucide="${album.icon || 'folder'}" class="w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-brand-400'}"></i>
+            <span>${album.name}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-white/20' : 'bg-slate-900'} font-mono">${count}</span>
+          </button>
+        `;
+      }).join('');
+
+      const select = document.getElementById("uploadAlbum");
+      if (select) {
+        select.innerHTML = appState.albums.filter(a => a.id !== 'all').map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      }
+
+      lucide.createIcons();
+    }
+
+    function getFilteredPhotos() {
+      return appState.photos.filter(p => {
+        if (appState.selectedAlbum !== "all" && p.album !== appState.selectedAlbum) return false;
+        if (appState.visibilityFilter !== "all" && p.visibility !== appState.visibilityFilter) return false;
+        if (appState.searchQuery) {
+          const q = appState.searchQuery.toLowerCase();
+          const matchTitle = (p.title || "").toLowerCase().includes(q);
+          const matchAlbum = (p.album || "").toLowerCase().includes(q);
+          const matchTags = (p.tags || []).some(t => t.toLowerCase().includes(q));
+          if (!matchTitle && !matchAlbum && !matchTags) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderPhotos() {
+      const grid = document.getElementById("photosGrid");
+      const empty = document.getElementById("emptyState");
+      const countBadge = document.getElementById("photoCountBadge");
+      const storageBadge = document.getElementById("storageBadge");
+
+      const filtered = getFilteredPhotos();
+
+      if (countBadge) countBadge.innerText = `${filtered.length} picture${filtered.length === 1 ? '' : 's'}`;
+      const totalBytes = appState.photos.reduce((sum, p) => sum + (p.size || 0), 0);
+      if (storageBadge) storageBadge.innerText = `${formatFileSize(totalBytes)} used`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = "";
+        empty.classList.remove("hidden");
+        empty.classList.add("flex");
+        return;
+      }
+
+      empty.classList.add("hidden");
+      empty.classList.remove("flex");
+
+      grid.innerHTML = filtered.map(p => `
+        <div class="group relative rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden shadow-md active:scale-98 transition-all flex flex-col cursor-pointer" onclick="openLightbox('${p.id}')">
+          <div class="aspect-square relative overflow-hidden bg-slate-950">
+            <img src="${p.thumbUrl || p.url}" alt="${p.title || 'Photo'}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            
+            <!-- Visibility & Album badge -->
+            <div class="absolute top-2 left-2 right-2 flex justify-between pointer-events-none">
+              <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold ${p.visibility === 'unlisted' ? 'bg-amber-500/80 text-black' : 'bg-emerald-500/80 text-black'} shadow">
+                ${p.visibility === 'unlisted' ? '🔒 Unlisted' : '🌟 Public'}
+              </span>
+            </div>
+
+            <!-- Share trigger -->
+            <button onclick="event.stopPropagation(); openShareModal('${p.id}')" class="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-slate-900/90 text-white flex items-center justify-center shadow-lg hover:bg-brand-600 transition-colors">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          
+          <div class="p-2.5">
+            <h4 class="text-xs font-bold text-white truncate">${p.title || 'Untitled'}</h4>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+              <span>${p.album || 'General'}</span>
+              <span class="font-mono">${formatFileSize(p.size)}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function selectAlbum(id) {
+      appState.selectedAlbum = id;
+      renderAlbums();
+      renderPhotos();
+    }
+
+    function toggleSearchInput() {
+      const row = document.getElementById("searchRow");
+      row.classList.toggle("hidden");
+      if (!row.classList.contains("hidden")) {
+        document.getElementById("searchInput")?.focus();
+      }
+    }
+
+    function clearSearch() {
+      const input = document.getElementById("searchInput");
+      if (input) input.value = "";
+      appState.searchQuery = "";
+      renderPhotos();
+    }
+
+    document.getElementById("searchInput")?.addEventListener("input", (e) => {
+      appState.searchQuery = e.target.value.trim();
+      renderPhotos();
+    });
+
+    function handleFilterChange() {
+      appState.visibilityFilter = document.getElementById("visibilityFilter").value;
+      renderPhotos();
+    }
+
+    // Uploader
+    function openUploadModal() {
+      document.getElementById("uploadModal")?.classList.remove("hidden");
+    }
+
+    function closeUploadModal() {
+      document.getElementById("uploadModal")?.classList.add("hidden");
+      appState.pendingUploadFiles = [];
+      document.getElementById("filesPreviewContainer")?.classList.add("hidden");
+      document.getElementById("dropzonePrompt")?.classList.remove("hidden");
+      document.getElementById("uploadProgressBarContainer")?.classList.add("hidden");
+    }
+
+    function handleFileSelect(event) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      appState.pendingUploadFiles = files;
+
+      const preview = document.getElementById("filesPreviewContainer");
+      const prompt = document.getElementById("dropzonePrompt");
+      const titleInput = document.getElementById("uploadTitle");
+
+      if (files.length === 1 && !titleInput.value) {
+        titleInput.value = files[0].name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+      }
+
+      preview.innerHTML = "";
+      prompt.classList.add("hidden");
+      preview.classList.remove("hidden");
+
+      files.forEach(f => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const div = document.createElement("div");
+          div.className = "aspect-square rounded-xl overflow-hidden border border-slate-700";
+          div.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+          preview.appendChild(div);
+        };
+        reader.readAsDataURL(f);
+      });
+    }
+
+    async function handleUploadSubmit(event) {
+      event.preventDefault();
+      if (!appState.pendingUploadFiles.length) {
+        showToast("Please choose a picture first", "warning");
+        return;
+      }
+
+      const title = document.getElementById("uploadTitle").value.trim() || "Untitled";
+      const album = document.getElementById("uploadAlbum").value || "camera";
+      const visibility = document.getElementById("uploadVisibility").value || "public";
+      const tags = document.getElementById("uploadTags").value.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
+
+      const progressContainer = document.getElementById("uploadProgressBarContainer");
+      const progressBar = document.getElementById("uploadProgressBar");
+      const btn = document.getElementById("uploadSubmitBtn");
+
+      progressContainer.classList.remove("hidden");
+      btn.disabled = true;
+
+      const files = appState.pendingUploadFiles;
+      let firstId = null;
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        let ipfsHash = null;
+        let imageUrl = null;
+
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("pinataMetadata", JSON.stringify({ name: file.name }));
+
+          const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${PINATA_JWT_DEFAULT}` },
+            body: formData
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            ipfsHash = data.IpfsHash;
+            imageUrl = `${PINATA_GATEWAY}${ipfsHash}`;
+          }
+        } catch (err) {
+          console.warn("IPFS upload fallback:", err);
+        }
+
+        const dataUrl = await new Promise(r => {
+          const reader = new FileReader();
+          reader.onload = (e) => r(e.target.result);
+          reader.readAsDataURL(file);
+        });
+
+        if (!imageUrl) {
+          imageUrl = dataUrl;
+          ipfsHash = `local-${Date.now()}`;
+        }
+
+        const newPhoto = {
+          id: `pic-${Date.now()}-${i}`,
+          title: files.length === 1 ? title : `${title} (${i + 1})`,
+          album: album,
+          visibility: visibility,
+          tags: tags,
+          url: imageUrl,
+          thumbUrl: imageUrl,
+          ipfsHash: ipfsHash,
+          size: file.size,
+          format: file.name.split('.').pop().toUpperCase() || 'IMG',
+          createdAt: new Date().toISOString()
+        };
+
+        appState.photos.unshift(newPhoto);
+        if (!firstId) firstId = newPhoto.id;
+
+        const pct = Math.round(((i + 1) / files.length) * 100);
+        progressBar.style.width = `${pct}%`;
+      }
+
+      saveStorage();
+      renderAlbums();
+      renderPhotos();
+      btn.disabled = false;
+      closeUploadModal();
+
+      showToast("Uploaded successfully!", "success");
+      if (firstId) openShareModal(firstId);
+    }
+
+    // Share Modal
+    function openShareModal(id) {
+      const p = appState.photos.find(item => item.id === id);
+      if (!p) return;
+
+      appState.activeSharePhotoId = p.id;
+      document.getElementById("shareModalThumb").src = p.thumbUrl || p.url;
+      document.getElementById("shareModalTitle").innerText = p.title || "Untitled";
+      
+      const visBadge = document.getElementById("shareModalVis");
+      visBadge.innerText = p.visibility === 'unlisted' ? '🔒 Unlisted' : '🌟 Public';
+      visBadge.className = `text-[10px] px-2 py-0.5 rounded-full font-bold mt-1 inline-block ${p.visibility === 'unlisted' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}`;
+
+      const shareUrl = `${window.location.origin}${window.location.pathname}#view=${p.id}`;
+      document.getElementById("shareModalQr").src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
+
+      window.history.replaceState(null, '', `#view=${p.id}`);
+      document.getElementById("shareModal")?.classList.remove("hidden");
+    }
+
+    function closeShareModal() {
+      document.getElementById("shareModal")?.classList.add("hidden");
+      appState.activeSharePhotoId = null;
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+
+    function copyCurrentShareLink() {
+      if (!appState.activeSharePhotoId) return;
+      const url = `${window.location.origin}${window.location.pathname}#view=${appState.activeSharePhotoId}`;
+      navigator.clipboard.writeText(url).then(() => showToast("Share link copied!", "success"));
+    }
+
+    function downloadCurrentSharePhoto() {
+      if (!appState.activeSharePhotoId) return;
+      const p = appState.photos.find(item => item.id === appState.activeSharePhotoId);
+      if (p) downloadPhoto(p.url, `${(p.title || 'photo').replace(/\s+/g, '_')}.${(p.format || 'png').toLowerCase()}`);
+    }
+
+    async function triggerNativeShare() {
+      if (!appState.activeSharePhotoId) return;
+      const p = appState.photos.find(item => item.id === appState.activeSharePhotoId);
+      if (!p) return;
+      const url = `${window.location.origin}${window.location.pathname}#view=${p.id}`;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: p.title || 'PicShare', url: url });
+        } catch (e) {}
+      } else {
+        copyCurrentShareLink();
+      }
+    }
+
+    // Lightbox
+    function openLightbox(id) {
+      const filtered = getFilteredPhotos();
+      const idx = filtered.findIndex(p => p.id === id);
+      if (idx === -1) return;
+
+      appState.activeLightboxIndex = idx;
+      updateLightbox();
+      document.getElementById("lightboxModal")?.classList.remove("hidden");
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightboxModal")?.classList.add("hidden");
+      appState.activeLightboxIndex = -1;
+    }
+
+    function updateLightbox() {
+      const filtered = getFilteredPhotos();
+      if (appState.activeLightboxIndex < 0 || appState.activeLightboxIndex >= filtered.length) return;
+      const p = filtered[appState.activeLightboxIndex];
+
+      document.getElementById("lightboxImg").src = p.url;
+      document.getElementById("lightboxTitle").innerText = p.title || "Untitled";
+      document.getElementById("lightboxDetails").innerText = `${new Date(p.createdAt).toLocaleDateString()} • ${p.format || 'IMG'} • ${formatFileSize(p.size)}`;
+      document.getElementById("lightboxIndex").innerText = `${appState.activeLightboxIndex + 1} of ${filtered.length}`;
+    }
+
+    function navigateLightbox(dir) {
+      const filtered = getFilteredPhotos();
+      if (!filtered.length) return;
+      appState.activeLightboxIndex = (appState.activeLightboxIndex + dir + filtered.length) % filtered.length;
+      updateLightbox();
+    }
+
+    function shareFromLightbox() {
+      const filtered = getFilteredPhotos();
+      const p = filtered[appState.activeLightboxIndex];
+      if (p) openShareModal(p.id);
+    }
+
+    function downloadFromLightbox() {
+      const filtered = getFilteredPhotos();
+      const p = filtered[appState.activeLightboxIndex];
+      if (p) downloadPhoto(p.url, `${(p.title || 'photo').replace(/\s+/g, '_')}.${(p.format || 'png').toLowerCase()}`);
+    }
+
+    function deleteFromLightbox() {
+      const filtered = getFilteredPhotos();
+      const p = filtered[appState.activeLightboxIndex];
+      if (!p) return;
+      if (!confirm("Delete this photo?")) return;
+      appState.photos = appState.photos.filter(item => item.id !== p.id);
+      saveStorage();
+      renderAlbums();
+      renderPhotos();
+      closeLightbox();
+      showToast("Photo deleted", "info");
+    }
+
+    function downloadPhoto(url, filename) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // New Album
+    function openNewAlbumModal() {
+      document.getElementById("newAlbumModal")?.classList.remove("hidden");
+    }
+
+    function closeNewAlbumModal() {
+      document.getElementById("newAlbumModal")?.classList.add("hidden");
+    }
+
+    function handleCreateAlbumSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById("newAlbumName").value.trim();
+      if (!name) return;
+      const slug = name.toLowerCase().replace(/[^a-z0-9]/g, "-");
+      appState.albums.push({ id: slug, name: name, icon: "folder" });
+      saveStorage();
+      renderAlbums();
+      closeNewAlbumModal();
+      showToast(`Album "${name}" created`, "success");
+      selectAlbum(slug);
+    }
+
+    // Settings
+    function openSettingsModal() {
+      document.getElementById("settingsModal")?.classList.remove("hidden");
+    }
+
+    function closeSettingsModal() {
+      document.getElementById("settingsModal")?.classList.add("hidden");
+    }
+
+    function resetGallery() {
+      if (!confirm("Are you sure? This will delete all your pictures.")) return;
+      appState.photos = [];
+      saveStorage();
+      renderAlbums();
+      renderPhotos();
+      closeSettingsModal();
+      showToast("Vault reset to empty", "info");
+    }
+
+    function exportBackupData() {
+      const blob = new Blob([JSON.stringify(appState.photos, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `picshare-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+    }
+
+    // Toast
+    function showToast(msg, type = "success") {
+      const container = document.getElementById("toastContainer");
+      if (!container) return;
+      const toast = document.createElement("div");
+      toast.className = `p-3 rounded-2xl shadow-xl text-xs font-bold text-center border backdrop-blur-md ${type === 'success' ? 'bg-slate-900/90 text-emerald-300 border-emerald-500/30' : 'bg-slate-900/90 text-amber-300 border-amber-500/30'}`;
+      toast.innerText = msg;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    function formatFileSize(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function setupKeyboard() {
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeLightbox();
+          closeShareModal();
+          closeUploadModal();
+          closeNewAlbumModal();
+          closeSettingsModal();
+        }
+        if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+          e.preventDefault();
+          toggleSearchInput();
+        }
+        if (!document.getElementById("lightboxModal").classList.contains("hidden")) {
+          if (e.key === "ArrowLeft") navigateLightbox(-1);
+          if (e.key === "ArrowRight") navigateLightbox(1);
+        }
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", initApp);
+  </script>
+
+</body>
+</html>
